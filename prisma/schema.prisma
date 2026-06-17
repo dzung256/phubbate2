@@ -1,0 +1,211 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String     @id @default(cuid())
+  username  String     @unique
+  email     String     @unique
+  password  String
+  firstName String?
+  lastName  String?
+  avatar    String?
+  bio       String?
+  role      UserRole   @default(USER)
+  isActive  Boolean    @default(true)
+  isBanned  Boolean    @default(false)
+  joinDate  DateTime   @default(now())
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  lessons   LessonProgress[]
+  training  TrainingSession[]
+  topics    SavedTopic[]
+  notes     SavedNote[]
+  workspaces PrepWorkspace[]
+  stats     UserStatistics?
+
+  @@index([email])
+  @@index([username])
+}
+
+model UserStatistics {
+  id                    String    @id @default(cuid())
+  userId                String    @unique
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  totalLessonsCompleted Int       @default(0)
+  totalTrainingHours    Float     @default(0)
+  trainingScore         Float     @default(0)
+  practiceScore         Float     @default(0)
+  winRate               Float     @default(0)
+  overallRating         Float     @default(0)
+  
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+model Lesson {
+  id          String           @id @default(cuid())
+  title       String
+  description String
+  content     String           @db.Text
+  level       LessonLevel
+  category    String
+  order       Int
+  duration    Int
+  imageUrl    String?
+  isPinned    Boolean          @default(false)
+  isActive    Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  progress    LessonProgress[]
+
+  @@index([level])
+  @@index([category])
+}
+
+enum LessonLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+model LessonProgress {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lessonId        String
+  lesson          Lesson    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  
+  isCompleted     Boolean   @default(false)
+  progressPercent Float     @default(0)
+  startedAt       DateTime  @default(now())
+  completedAt     DateTime?
+  notes           String?   @db.Text
+
+  @@unique([userId, lessonId])
+  @@index([userId])
+  @@index([lessonId])
+}
+
+model Topic {
+  id              String           @id @default(cuid())
+  title           String
+  description     String           @db.Text
+  category        TopicCategory
+  difficulty      Int              @default(5)
+  pros            String           @db.Text
+  cons            String           @db.Text
+  backgroundInfo  String?          @db.Text
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  savedTopics     SavedTopic[]
+  trainingSessions TrainingSession[]
+
+  @@index([category])
+}
+
+enum TopicCategory {
+  EDUCATION
+  TECHNOLOGY
+  ENVIRONMENT
+  ECONOMICS
+  POLITICS
+  SOCIETY
+  MEDIA
+  CULTURE
+  MISCELLANEOUS
+}
+
+model SavedTopic {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topicId   String
+  topic     Topic     @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  
+  savedAt   DateTime  @default(now())
+  notes     String?   @db.Text
+
+  @@unique([userId, topicId])
+  @@index([userId])
+}
+
+model TrainingSession {
+  id            String        @id @default(cuid())
+  userId        String
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topicId       String
+  topic         Topic         @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  
+  mode          TrainingMode
+  difficulty    Int           @default(5)
+  duration      Int?
+  userArgument  String        @db.Text
+  aiResponse    String?       @db.Text
+  score         Float?
+  feedback      String?       @db.Text
+  
+  startedAt     DateTime      @default(now())
+  completedAt   DateTime?
+
+  @@index([userId])
+  @@index([topicId])
+}
+
+enum TrainingMode {
+  AI_VS_HUMAN
+  REBUTTAL_PRACTICE
+  SPEECH_PRACTICE
+  NOTE_TAKING_PRACTICE
+}
+
+model PrepWorkspace {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  title       String
+  topic       String
+  arguments   String?   @db.Text
+  examples    String?   @db.Text
+  rebuttals   String?   @db.Text
+  notes       String?   @db.Text
+  isDraft     Boolean   @default(true)
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+model SavedNote {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  title     String
+  content   String    @db.Text
+  topic     String?
+  tags      String?
+  
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([userId])
+}
